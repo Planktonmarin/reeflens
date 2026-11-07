@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ReefLens">
+<meta name="theme-color" content="#050b14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<title>ReefLens</title>
+</head>
+<body>
+
+<main id="app">
+
+  <!-- CAMERA -->
+  <section id="view-camera" class="view active">
+    <div id="stage">
+      <div id="frame">
+        <canvas id="gl"></canvas>
+        <img id="ref" alt="" hidden>
+        <div id="grid" hidden></div>
+        <div id="markers"></div>
+        <div id="splitline" hidden><span>RAW</span><i></i><span>FIXED</span></div>
+      </div>
+      <canvas id="hist" width="132" height="52" hidden></canvas>
+      <div id="rec" hidden><b></b><span id="recTime">0:00</span></div>
+      <div id="camMsg" hidden>
+        <p id="camMsgText"></p>
+        <button id="camStart" class="btn primary">Start camera</button>
+      </div>
+      <div id="flash"></div>
+    </div>
+
+    <div id="topbar">
+      <div id="lenses"></div>
+      <div id="toggles">
+        <button class="chip" id="tAuto" title="Automatic color correction">Auto</button>
+        <button class="chip" id="tSplit" title="Raw vs corrected">Split</button>
+        <button class="chip" id="tGrid" title="Grid">Grid</button>
+        <button class="chip" id="tHist" title="Histogram">Hist</button>
+      </div>
+    </div>
+
+    <div id="projbar" hidden>
+      <span id="projName"></span>
+      <button class="chip" id="pRef">Ref</button>
+      <input type="range" id="pOpacity" min="0" max="100" value="40" aria-label="Reference opacity">
+      <button class="chip" id="pMark">+ Mark</button>
+      <button class="chip" id="pClear">Clear</button>
+      <button class="chip" id="pClose">✕</button>
+    </div>
+
+    <div id="controls">
+      <div id="sheet" hidden>
+        <div class="seg" id="sheetTabs">
+          <button data-sheet="color" class="active">Color</button>
+          <button data-sheet="light">Light</button>
+          <button data-sheet="presets">Presets</button>
+        </div>
+        <div class="sheet-pane" id="pane-color">
+          <div class="btnrow">
+            <button class="btn" id="bAuto">Auto: off</button>
+            <button class="btn" id="bLock">Lock into sliders</button>
+            <button class="btn" id="bReset">Reset</button>
+          </div>
+          <div id="sl-color"></div>
+        </div>
+        <div class="sheet-pane" id="pane-light" hidden>
+          <div id="sl-light"></div>
+        </div>
+        <div class="sheet-pane" id="pane-presets" hidden>
+          <div class="btnrow">
+            <input id="presetName" type="text" placeholder="Preset name" maxlength="40">
+            <button class="btn primary" id="presetSave">Save current</button>
+          </div>
+          <div id="presetList"></div>
+          <div class="btnrow">
+            <button class="btn" id="presetShare">Share all</button>
+            <button class="btn" id="presetImport">Import…</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="shutterRow">
+        <button id="lastThumb" aria-label="Open last capture"></button>
+        <button id="shutter" aria-label="Shutter"><i></i></button>
+        <div id="sideBtns">
+          <button class="chip" id="modeBtn">Photo</button>
+          <button class="chip" id="adjBtn">Adjust</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section id="view-gallery" class="view page">
+    <header><h1>Gallery</h1>
+      <div class="seg small" id="galFilter">
+        <button data-f="all" class="active">All</button>
+        <button data-f="photo">Photos</button>
+        <button data-f="video">Videos</button>
+      </div>
+    </header>
+    <div id="galGrid" class="thumbs"></div>
+    <p id="galEmpty" class="muted center" hidden>Nothing yet. Shoot something from the Camera tab.</p>
+  </section>
+
+  <!-- PROJECTS -->
+  <section id="view-projects" class="view page">
+    <div id="projList">
+      <header><h1>Time-lapse</h1><button class="btn primary" id="newProject">+ New</button></header>
+      <div id="projCards"></div>
+      <p id="projEmpty" class="muted center" hidden>No projects yet. A project keeps repeat shots of one view, lines up each new shot with a ghost of the first, and turns them into a video.</p>
+    </div>
+    <div id="projDetail" hidden>
+      <header>
+        <button class="btn" id="pdBack">‹ Back</button>
+        <h1 id="pdTitle"></h1>
+      </header>
+      <div class="btnrow wrap">
+        <button class="btn primary" id="pdShoot">Shoot</button>
+        <button class="btn" id="pdCompare">Compare</button>
+        <button class="btn" id="pdExport">Export video</button>
+        <button class="btn" id="pdRename">Rename</button>
+        <button class="btn danger" id="pdDelete">Delete</button>
+      </div>
+      <p class="muted" id="pdInfo"></p>
+      <div id="pdThumbs" class="thumbs"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" class="view page">
+    <header><h1>Settings</h1></header>
+    <div class="form">
+      <label>Capture resolution
+        <select id="setRes"><option value="1080">1080p (fast)</option><option value="4k">4K (if camera supports it)</option></select>
+      </label>
+      <label>Photo quality <span id="setQVal"></span>
+        <input type="range" id="setQ" min="60" max="100" value="92">
+      </label>
+      <label class="check"><input type="checkbox" id="setWake"> Keep screen awake in Camera</label>
+      <div class="card">
+        <b>Storage</b>
+        <p class="muted" id="storInfo">…</p>
+        <button class="btn" id="storPersist">Ask iPhone to keep my data</button>
+      </div>
+      <div class="card">
+        <b>Backup</b>
+        <p class="muted">Photos and videos live only in this app. Open one in the Gallery and tap Share, then choose Save Image or Save Video to put a copy in Photos.</p>
+      </div>
+      <div class="card">
+        <b>What this app can't do</b>
+        <p class="muted">Safari doesn't allow volume-button shutter, flash/torch control, tap-to-focus, haptics or iCloud sync, and this app has no fish-ID model. Light is not measured in PAR: a phone camera can't do that.</p>
+      </div>
+      <button class="btn danger" id="wipe">Delete all photos, videos and projects</button>
+    </div>
+  </section>
+
+</main>
+
+<nav id="tabs">
+  <button data-view="camera" class="active"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Camera</button>
+  <button data-view="gallery"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m4 16 5-5 4 4 3-3 4 4"/></svg>Gallery</button>
+  <button data-view="projects"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7"/><path d="M12 9v4l3 2M9 3h6"/></svg>Time-lapse</button>
+  <button data-view="settings"><svg viewBox="0 0 24 24"><path d="M5 7h9M18 7h1M5 17h1M10 17h9"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Settings</button>
+</nav>
+
+<!-- VIEWER -->
+<div id="viewer" hidden>
+  <div id="vTop"><button class="chip" id="vClose">✕ Close</button><span id="vInfo"></span></div>
+  <div id="vBody"></div>
+  <div id="vBar">
+    <button class="btn" id="vPrev">‹</button>
+    <button class="btn primary" id="vShare">Share / Save</button>
+    <button class="btn" id="vRef" hidden>Use as reference</button>
+    <button class="btn danger" id="vDel">Delete</button>
+    <button class="btn" id="vNext">›</button>
+  </div>
+</div>
+
+<!-- COMPARE -->
+<div id="compare" hidden>
+  <div id="cTop"><button class="chip" id="cClose">✕ Close</button><span id="cInfo"></span></div>
+  <div id="cBox">
+    <img id="cA" alt="">
+    <img id="cB" alt="">
+    <div id="cLine"></div>
+  </div>
+  <input type="range" id="cRange" min="0" max="100" value="50">
+  <div id="cLabels"><span id="cLa"></span><span id="cLb"></span></div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" hidden>
+  <form id="modalForm">
+    <h3 id="mTitle"></h3>
+    <div id="mBody"></div>
+    <div class="btnrow">
+      <button type="button" class="btn" id="mCancel">Cancel</button>
+      <button type="submit" class="btn primary" id="mOk">OK</button>
+    </div>
+  </form>
+</div>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
